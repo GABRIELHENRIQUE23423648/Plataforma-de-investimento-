@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Kiwify Fake – Vendas Automáticas</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: #f2f4f8;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1000px;
+  margin: auto;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+.card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+label {
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.intervalo {
+  display: flex;
+  gap: 6px;
+}
+
+.intervalo input {
+  text-align: center;
+}
+
+.botoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #fff;
+}
+
+.ativar { background: #4CAF50; }
+.parar { background: #f44336; }
+.reset { background: #2196F3; }
+
+.status {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+th {
+  background: #f7f7f7;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📊 Kiwify Fake – Vendas Automáticas</h1>
+
+<div class="card">
+<h2>⚙️ Configuração das Vendas</h2>
+
+<div class="grid">
+  <div>
+    <label>Vendas por dia</label>
+    <input type="number" id="vendasDia" value="10">
+  </div>
+
+  <div>
+    <label>Valor da venda (R$)</label>
+    <input type="number" id="valorVenda" value="50">
+  </div>
+
+  <div>
+    <label>Intervalo</label>
+    <div class="intervalo">
+      <input type="number" id="horas" placeholder="H">
+      <input type="number" id="minutos" placeholder="M">
+      <input type="number" id="segundos" placeholder="S">
+    </div>
+  </div>
+</div>
+
+<div class="botoes">
+  <button class="ativar" onclick="ativarVendas()">▶ Ativar</button>
+  <button class="parar" onclick="pararVendas()">⏹ Parar</button>
+</div>
+
+<p class="status" id="status">Status: 🔴 Parado</p>
+</div>
+
+<div class="card">
+<h2>📈 Resumo do Dia</h2>
+<p>Vendas hoje: <strong id="vendasHoje">0</strong></p>
+<p>Faturamento hoje: R$ <strong id="faturamentoHoje">0.00</strong></p>
+<button class="reset" onclick="resetarDia()">🔄 Resetar Dia</button>
+</div>
+
+<div class="card">
+<h2>🧾 Histórico de Vendas</h2>
+<table>
+<thead>
+<tr>
+<th>Código</th>
+<th>Data</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody id="tabelaVendas"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+let intervaloID = null;
+let vendasHoje = 0;
+let faturamentoHoje = 0;
+let historico = JSON.parse(localStorage.getItem("historicoVendas")) || [];
+
+function gerarCodigoUnico() {
+  const d = new Date();
+  const data = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `KW-${data}-${random}`;
+}
+
+function ativarVendas() {
+  const limite = Number(vendasDia.value);
+  const valor = Number(valorVenda.value);
+
+  const h = Number(horas.value || 0);
+  const m = Number(minutos.value || 0);
+  const s = Number(segundos.value || 0);
+
+  const intervaloMs = (h * 3600 + m * 60 + s) * 1000;
+  if (intervaloMs <= 0) return alert("Defina um intervalo válido");
+
+  status.innerText = "Status: 🟢 Ativo";
+
+  intervaloID = setInterval(() => {
+    if (vendasHoje >= limite) {
+      pararVendas();
+      return;
+    }
+
+    const venda = {
+      codigo: gerarCodigoUnico(),
+      data: new Date().toLocaleString(),
+      valor: valor
+    };
+
+    vendasHoje++;
+    faturamentoHoje += valor;
+    historico.push(venda);
+
+    salvar();
+    atualizarTela();
+  }, intervaloMs);
+}
+
+function pararVendas() {
+  clearInterval(intervaloID);
+  status.innerText = "Status: 🔴 Parado";
+}
+
+function resetarDia() {
+  vendasHoje = 0;
+  faturamentoHoje = 0;
+  salvar();
+  atualizarTela();
+}
+
+function salvar() {
+  localStorage.setItem("vendasHoje", vendasHoje);
+  localStorage.setItem("faturamentoHoje", faturamentoHoje);
+  localStorage.setItem("historicoVendas", JSON.stringify(historico));
+}
+
+function atualizarTela() {
+  vendasHojeEl.innerText = vendasHoje;
+  faturamentoHojeEl.innerText = faturamentoHoje.toFixed(2);
+  tabelaVendas.innerHTML = "";
+  historico.slice().reverse().forEach(v => {
+    tabelaVendas.innerHTML += `
+      <tr>
+        <td>${v.codigo}</td>
+        <td>${v.data}</td>
+        <td>R$ ${v.valor.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+}
+
+const vendasHojeEl = document.getElementById("vendasHoje");
+const faturamentoHojeEl = document.getElementById("faturamentoHoje");
+
+vendasHoje = Number(localStorage.getItem("vendasHoje")) || 0;
+faturamentoHoje = Number(localStorage.getItem("faturamentoHoje")) || 0;
+
+atualizarTela();
+</script>
+
+</body>
+  </html>
